@@ -7,7 +7,7 @@ const client = new Evernote.Client({
   china: false,
 });
 
-function replaceSlashes(text) {
+function sanitizeNotebookFilenames(text) {
   return text.replace("/", "_")
 }
 
@@ -55,7 +55,7 @@ async function writeNotebook(noteStore, notebook) {
     notesMetadataListPages.push(page)
 
   }
-  const filePath = `${BASE_DIR}/${replaceSlashes(notebook.name)}.json`;
+  const filePath = `${BASE_DIR}/${sanitizeNotebookFilenames(notebook.name)}.json`;
 
   await fs.writeFile(filePath, JSON.stringify({
     startIndex: notesMetadataListPages.map(p => p.startIndex),
