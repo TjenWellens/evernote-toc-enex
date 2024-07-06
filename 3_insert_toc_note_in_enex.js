@@ -6,6 +6,7 @@
  */
 
 const fs = require('node:fs/promises')
+const fs_stream = require('node:fs')
 
 const ENEX_ROOT_DIR = "/Users/tjen/Downloads/yarle-run/input/evernote/"
 const BASE_DIR = "./out"
@@ -40,13 +41,46 @@ async function matchEnexWithXmlSnippets() {
 }
 
 async function applySnippet(enexFilePath, xmlSnippetFilePath) {
-  const content = await fs.readFile(enexFilePath, {encoding: 'utf8'})
+  let replaced = false
+
   const xmlSnippet = await fs.readFile(xmlSnippetFilePath, {encoding: 'utf8'})
   const regex = /<note>/
   const replacement = xmlSnippet + "\n" + "<note>"
-  const contentWithToc = content.replace(regex, replacement)
+
   const enexWithTocPath = enexFilePath.replace(/.enex$/, ".toc.enex");
-  await fs.writeFile(enexWithTocPath, contentWithToc)
+
+  const writableStream = fs_stream.createWriteStream(enexWithTocPath);
+  writableStream.on('error',  (error) => {
+    console.error(`write error: ${error.message}`);
+  });
+
+  // // Replace the original file with the updated file
+  // writableStream.on('finish', async () => {
+  //   try {
+  //     await _renameFile(originalFile, updatedFile);
+  //     resolve();
+  //   } catch (error) {
+  //     reject(`Error: Error renaming ${originalFile} to ${updatedFile} => ${error.message}`);
+  //   }
+  // });
+
+  const readableStream = fs_stream.createReadStream(enexFilePath, 'utf8');
+  readableStream.on('error', function (error) {
+    console.error(`read error: ${error.message}`);
+  })
+
+  readableStream.on('data', (chunk) => {
+    if(!replaced) {
+      chunk = chunk.toString().replace(regex, replacement)
+    }
+    writableStream.write(chunk);
+  })
+
+  // Once we've finished reading the original file...
+  readableStream.on('end', () => {
+    writableStream.end(); // emits 'finish' event, executes below statement
+  });
+
   return Promise.resolve(`added ToC to ${enexWithTocPath}`)
 }
 
