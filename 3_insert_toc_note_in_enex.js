@@ -42,8 +42,42 @@ async function matchEnexWithXmlSnippets() {
   return {matches, missing};
 }
 
+function replaceOnceInFile(enexWithTocPath, enexFilePath, regex, replacement) {
+  return new Promise((resolve, reject)=>{
+    let replaced = false
+
+    const writableStream = fs_stream.createWriteStream(enexWithTocPath);
+    writableStream.on('error', (error) => {
+      console.error(`write error: ${error.message}`);
+      reject(`write error: ${error.message}`);
+    });
+
+    writableStream.on('finish', async () => {
+      resolve();
+    });
+
+    const readableStream = fs_stream.createReadStream(enexFilePath, 'utf8');
+    readableStream.on('error', function (error) {
+      console.error(`read error: ${error.message}`);
+      reject(`read error: ${error.message}`);
+    })
+
+    readableStream.on('data', (chunk) => {
+      if (!replaced) {
+        replaced = true
+        chunk = chunk.toString().replace(regex, replacement)
+      }
+      writableStream.write(chunk);
+    })
+
+    // Once we've finished reading the original file...
+    readableStream.on('end', () => {
+      writableStream.end(); // emits 'finish' event, executes below statement
+    });
+  })
+}
+
 async function applySnippet(enexFilePath, xmlSnippetFilePath) {
-  let replaced = false
 
   const xmlSnippet = await fs.readFile(xmlSnippetFilePath, {encoding: 'utf8'})
   const regex = /<note>/
@@ -51,37 +85,7 @@ async function applySnippet(enexFilePath, xmlSnippetFilePath) {
 
   const enexWithTocPath = enexFilePath.replace(/.enex$/, ".toc.enex");
 
-  const writableStream = fs_stream.createWriteStream(enexWithTocPath);
-  writableStream.on('error',  (error) => {
-    console.error(`write error: ${error.message}`);
-  });
-
-  // // Replace the original file with the updated file
-  // writableStream.on('finish', async () => {
-  //   try {
-  //     await _renameFile(originalFile, updatedFile);
-  //     resolve();
-  //   } catch (error) {
-  //     reject(`Error: Error renaming ${originalFile} to ${updatedFile} => ${error.message}`);
-  //   }
-  // });
-
-  const readableStream = fs_stream.createReadStream(enexFilePath, 'utf8');
-  readableStream.on('error', function (error) {
-    console.error(`read error: ${error.message}`);
-  })
-
-  readableStream.on('data', (chunk) => {
-    if(!replaced) {
-      chunk = chunk.toString().replace(regex, replacement)
-    }
-    writableStream.write(chunk);
-  })
-
-  // Once we've finished reading the original file...
-  readableStream.on('end', () => {
-    writableStream.end(); // emits 'finish' event, executes below statement
-  });
+  await replaceOnceInFile(enexWithTocPath, enexFilePath, regex, replacement);
 
   return Promise.resolve(`added ToC to ${enexWithTocPath}`)
 }
