@@ -21,10 +21,19 @@ this creates `out/<notebook-name>.json` for each notebook
 node 2_create_toc_note_xml.js
 ```
 
+## 3. run to create xml for notes (output pasted somewhere specific in .enex file)
+
+! make a backup of your .enex files!
+
+```shell
+node 3_insert_toc_note_in_enex.js
+```
+
 ---
 
 ## expected issues
 
+- duplicate notebook names (even if under different evernote stack) will cause one's json to overwrite the other in step 1, and one will seem not to exist (leading to one's ToC note to end up in both)
 - if you have 'weird' characters in your notebook names that cannot be used in filenames, you should do some extra
   cleaning in `1_get_notes_metadata.js > sanitizeNotebookFilenames()`
 - if you cannot get an evernote developer token, maybe you can try something with Bearer tokens (or however evernote's
