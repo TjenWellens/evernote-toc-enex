@@ -8,7 +8,7 @@ const client = new Evernote.Client({
 });
 
 function sanitizeNotebookFilenames(text) {
-  return text.replace("/", "_")
+  return text.replace("/", "")
 }
 
 const spec = new Evernote.NoteStore.NotesMetadataResultSpec({
