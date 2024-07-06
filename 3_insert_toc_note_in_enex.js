@@ -1,14 +1,20 @@
 /**
- * Looks for .enex files in ENEX_ROOT_DIR
+ * Looks for .enex files in ENEX_OUTPUT_DIR
  * and see if BASE_DIR has a matching .xml file (based on filename aka notebook name).
  * Inserts the snippet before the first <note> position in the enex file.
- * Writes to a new file, next to the original enex file <ENEX_ROOT_DIR>/<enex-file-path>.toc.enex
+ * Writes to a new file, next to the original enex file <ENEX_OUTPUT_DIR>/<enex-file-path>.toc.enex
  */
 
 const fs = require('node:fs/promises')
 const fs_stream = require('node:fs')
+const path = require("path")
 
-const ENEX_ROOT_DIR = "/Users/tjen/Downloads/yarle-run/input/evernote/"
+/**
+ * make sure this is different from ENEX_INPUT_DIR (for now)
+ * @type {string}
+ */
+const ENEX_OUTPUT_DIR = "/Users/tjen/Downloads/yarle-run/input/evernote.toc/"
+const ENEX_INPUT_DIR = "/Users/tjen/Downloads/yarle-run/input/evernote/"
 const BASE_DIR = "./out"
 
 function path2filenameWithoutExtension(path) {
@@ -17,7 +23,7 @@ function path2filenameWithoutExtension(path) {
 }
 
 async function matchEnexWithXmlSnippets() {
-  const enexDir = await fs.readdir(ENEX_ROOT_DIR, {recursive: true})
+  const enexDir = await fs.readdir(ENEX_INPUT_DIR, {recursive: true})
   const enexFilePaths = enexDir
     .filter(s => !s.endsWith(".toc.enex"))
     .filter(s => s.endsWith(".enex"));
@@ -34,7 +40,8 @@ async function matchEnexWithXmlSnippets() {
     return {
       enexFilename,
       xmlSnippetFilePath: xmlSnippetFilePath ? `${BASE_DIR}/${xmlSnippetFilePath}` : xmlSnippetFilePath ,
-      enexFilePath: `${ENEX_ROOT_DIR}/${enexFilePath}`,
+      enexFilePath: `${ENEX_INPUT_DIR}/${enexFilePath}`,
+      enexOutputFilePath: `${ENEX_OUTPUT_DIR}/${enexFilePath}`,
     }
   });
   const matches = pathsGrouped.filter(e => e.xmlSnippetFilePath !== undefined);
@@ -77,13 +84,16 @@ function replaceOnceInFile(enexWithTocPath, enexFilePath, regex, replacement) {
   })
 }
 
-async function applySnippet(enexFilePath, xmlSnippetFilePath) {
+async function applySnippet(enexFilePath, enexOutputFilePath, xmlSnippetFilePath) {
 
   const xmlSnippet = await fs.readFile(xmlSnippetFilePath, {encoding: 'utf8'})
   const regex = /<note>/
   const replacement = xmlSnippet + "\n" + "<note>"
 
-  const enexWithTocPath = enexFilePath.replace(/.enex$/, ".toc.enex");
+  const enexWithTocPath = enexOutputFilePath;
+  // const enexWithTocPath = enexFilePath.replace(/.enex$/, ".toc.enex");
+
+  await fs.mkdir(path.dirname(enexOutputFilePath), {recursive:true})
 
   await replaceOnceInFile(enexWithTocPath, enexFilePath, regex, replacement);
 
@@ -95,7 +105,7 @@ async function main() {
   const applied = await Promise.all(
     matches
       // .filter(e => e.enexFilename === 'export_test')
-      .map(e => applySnippet(e.enexFilePath, e.xmlSnippetFilePath))
+      .map(e => applySnippet(e.enexFilePath, e.enexOutputFilePath, e.xmlSnippetFilePath))
   )
 
   return Promise.resolve([
