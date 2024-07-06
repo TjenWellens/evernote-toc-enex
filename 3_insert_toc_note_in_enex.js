@@ -18,7 +18,9 @@ function path2filenameWithoutExtension(path) {
 
 async function matchEnexWithXmlSnippets() {
   const enexDir = await fs.readdir(ENEX_ROOT_DIR, {recursive: true})
-  const enexFilePaths = enexDir.filter(s => s.endsWith(".enex"));
+  const enexFilePaths = enexDir
+    .filter(s => !s.endsWith(".toc.enex"))
+    .filter(s => s.endsWith(".enex"));
   const baseDir = await fs.readdir(BASE_DIR)
   const xmlSnippetFilePaths = baseDir.filter(s => s.endsWith(".xml"))
   const xmlSnippetFilePathLookup = xmlSnippetFilePaths.reduce((map, path) => {
